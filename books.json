@@ -1,0 +1,146 @@
+[
+  {
+    "title": "Deep Work",
+    "author": "Cal Newport",
+    "genre": "Productivity",
+    "description": "Rules for focused success in a distracted world.",
+    "location": "Shelf B2",
+    "rating": 4.6
+  },
+  {
+    "title": "Atomic Habits",
+    "author": "James Clear",
+    "genre": "Self-help",
+    "description": "An easy & proven way to build good habits and break bad ones.",
+    "location": "Shelf A1",
+    "rating": 4.8
+  },
+  {
+    "title": "Zero to One",
+    "author": "Peter Thiel",
+    "genre": "Business",
+    "description": "Notes on startups and how to build the future.",
+    "location": "Shelf C3",
+    "rating": 4.3
+  },
+  {
+    "title": "The Power of Now",
+    "author": "Eckhart Tolle",
+    "genre": "Spirituality",
+    "description": "A guide to spiritual enlightenment and living in the present moment.",
+    "location": "Shelf D1",
+    "rating": 4.7
+  },
+  {
+    "title": "Thinking, Fast and Slow",
+    "author": "Daniel Kahneman",
+    "genre": "Psychology",
+    "description": "An exploration of the two systems that drive the way we think.",
+    "location": "Shelf B4",
+    "rating": 4.4
+  },
+  {
+    "title": "Grit",
+    "author": "Angela Duckworth",
+    "genre": "Motivation",
+    "description": "The power of passion and perseverance.",
+    "location": "Shelf A2",
+    "rating": 4.5
+  },
+  {
+    "title": "The Lean Startup",
+    "author": "Eric Ries",
+    "genre": "Entrepreneurship",
+    "description": "How today's entrepreneurs use continuous innovation to create radically successful businesses.",
+    "location": "Shelf C1",
+    "rating": 4.3
+  },
+  {
+    "title": "Can't Hurt Me",
+    "author": "David Goggins",
+    "genre": "Biography",
+    "description": "Master your mind and defy the odds.",
+    "location": "Shelf E2",
+    "rating": 4.9
+  },
+  {
+    "title": "Start With Why",
+    "author": "Simon Sinek",
+    "genre": "Leadership",
+    "description": "How great leaders inspire everyone to take action.",
+    "location": "Shelf C2",
+    "rating": 4.6
+  },
+  {
+    "title": "The Subtle Art of Not Giving a F*ck",
+    "author": "Mark Manson",
+    "genre": "Self-help",
+    "description": "A counterintuitive approach to living a good life.",
+    "location": "Shelf A3",
+    "rating": 4.2
+  },
+  {
+    "title": "Educated",
+    "author": "Tara Westover",
+    "genre": "Memoir",
+    "description": "A memoir about growing up in a strict and abusive household in rural Idaho and eventually escaping to learn about the wider world through education.",
+    "location": "Shelf D3",
+    "rating": 4.7
+  },
+  {
+    "title": "Hooked",
+    "author": "Nir Eyal",
+    "genre": "Marketing",
+    "description": "How to build habit-forming products.",
+    "location": "Shelf F1",
+    "rating": 4.4
+  },
+  {
+    "title": "The 4-Hour Workweek",
+    "author": "Tim Ferriss",
+    "genre": "Lifestyle Design",
+    "description": "Escape 9–5, live anywhere, and join the new rich.",
+    "location": "Shelf E1",
+    "rating": 4.1
+  },
+	{
+		"title": "Mindset",
+		"author": "Carol S. Dweck",
+		"genre": "Psychology",
+		"description": "The new psychology of success.",
+		"location": "Shelf B3",
+		"rating": 4.5
+	},
+	{
+		"title": "Drive",
+		"author": "Daniel H. Pink",
+		"genre": "Motivation",
+		"description": "The surprising truth about what motivates us.",
+		"location": "Shelf A4",
+		"rating": 4.3
+	},
+	{
+		"title": "Man's Search for Meaning",
+		"author": "Viktor E. Frankl",
+		"genre": "Memoir",
+		"description": "A Holocaust survivor's lessons for spiritual survival.",
+		"location": "Shelf D2",
+		"rating": 4.8
+	},
+	{
+		"title": "The Alchemist",
+		"author": "Paulo Coelho",
+		"genre": "Fiction",
+		"description": "A journey of self-discovery and following your dreams.",
+		"location": "Shelf F2",
+		"rating": 4.2
+	},
+	{
+		"title": "Sapiens",
+		"author": "Yuval Noah Harari",
+		"genre": "History",
+		"description": "A brief history of humankind.",
+		"location": "Shelf G1",
+		"rating": 4.7
+	}
+]

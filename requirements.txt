@@ -1,0 +1,8 @@
+langgraph
+langchain_community
+langchain_openai
+openai
+chromadb
+sentence-transformers
+langchain-community
+fastapi[standard]
