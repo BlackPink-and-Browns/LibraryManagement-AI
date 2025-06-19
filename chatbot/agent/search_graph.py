@@ -43,13 +43,14 @@ class BookState(MessagesState):
 sys_msg = """You are a helpful library assistant. Your task is to help users find information about books in the library.
 You will be provided with a series of messages from the user. Based on these messages, you need to extract the following information about a book (only if mentioned by the user):
 (if Image is provided, you can extract the information from the image)
-1. Title: The title of the book.
-2. Author: The author of the book.
-3. Genre: The genre of the book.
-4. Description: A brief description of the book.
-5. Location: The location of the book in the library."""
+1. id: the id of the book (not isbn).
+2. Title: The title of the book.
+3. Author: The author of the book.
+4. Genre: The genre of the book.
+5. Description: A brief description of the book.
+6. Location: The location of the book in the library."""
 
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+llm = ChatOpenAI(model="gpt-4o", temperature=0)
 llm_with_tools = llm.bind_tools(search_tools)  # No tools are bound in this case, but you can add them if needed.
 def retrieveBookToSearch(state: BookState):
 
@@ -125,6 +126,9 @@ def searchForBooks(state: BookState):
     Genre: {state.get('genre', '')}
     Author: {state.get('author', '')}
     Location: {state.get('location', '')}
+
+    Keep the ids (book.id) of the books in the output.
+    id is important, to get it you can use id key of get_similar_books.
     """
 
     system_msg = AIMessage(
@@ -149,11 +153,12 @@ def getBookList(state: BookState):
     return the list of books in the following format:
     message: A paragraph description about each books. If there is no book, return an explanation that no books were found.
     books: A list of books, each represented as a dictionary:
+    id is very important. If not mentioned, it should be None.
     """
 
     class Book(BaseModel):
         id: Optional[str] = Field(
-            description="The unique identifier of the book, very important, don't hallucinate. If not mentioned, it should be None.",
+            description="The unique identifier of the book (not isbn), very important. If not mentioned, it should be None.",
             default=None
         )
         title: Optional[str] = Field(
@@ -210,7 +215,7 @@ def getBookList(state: BookState):
 
 builder = StateGraph(BookState)
 builder.add_node("retrieveBookToSearch",retrieveBookToSearch)
-# builder.add_node("handleSearch",handleSearch)
+builder.add_node("handleSearch",handleSearch)
 # builder.add_node("END",END)
 builder.add_node("getBookList", getBookList)
 builder.add_node("searchForBooks", searchForBooks)
@@ -220,8 +225,8 @@ builder.add_conditional_edges("searchForBooks", tools_condition)
 builder.add_edge("tools", "searchForBooks")
 
 builder.add_edge(START, "retrieveBookToSearch")
-# builder.add_edge("retrieveBookToSearch","handleSearch")
-builder.add_edge("retrieveBookToSearch","searchForBooks")
+builder.add_edge("retrieveBookToSearch","handleSearch")
+builder.add_edge("handleSearch","searchForBooks")
 builder.add_edge("searchForBooks","getBookList")
 # builder.add_edge("handleSearch","getBookList")
 builder.add_edge("getBookList",END)

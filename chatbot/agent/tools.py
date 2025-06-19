@@ -16,7 +16,7 @@ headers = {
 
 def get_books_by_genre(genre_id: int) -> list[dict]:
     """
-    Fetches books by genre from the backend API.
+    Fetches books by genre from the backend API. (to be called after get_all_genres)
     Args:
         genre_id (int): The ID of the genre to filter books by.
     Returns:
@@ -66,7 +66,7 @@ def get_books_by_id(book_id: str) -> dict:
 
 def get_books_by_shelf(shelf_id: int) -> dict:
     """
-    Fetches books by shelf from the backend API.
+    Fetches books by shelf from the backend API. (to be called after get_all_shelves)
     Args:
         shelf_id (int): The ID of the shelf to filter books by.
     Returns:
@@ -88,7 +88,7 @@ def get_books_by_shelf(shelf_id: int) -> dict:
 
 def get_similar_books(query: str, top_k: int = 5) -> list[dict]:
     """
-    Fetches similar books based on a query. use only if the user has provided a query.
+    Searches books based on a query. use only if the user has provided a query.
     This function uses the semantic search capabilities to find books similar to the provided query.
     Args:
         query (str): The search query for finding similar books.
@@ -98,6 +98,7 @@ def get_similar_books(query: str, top_k: int = 5) -> list[dict]:
     """
     try:
         results = query_books(query, top_k=top_k)
+        print(results)
         return results
     except Exception as e:
         print(f"Error fetching similar books: {e}")
@@ -196,7 +197,7 @@ def get_all_authors() -> list[dict]:
 
 def get_books_by_author(author_id: int) -> list[dict]:
     """
-    Fetches books by author from the backend API.
+    Fetches books by author from the backend API. (to be called after get_all_authors)
     Args:
         author_id (int): The ID of the author to filter books by.
     Returns:
@@ -218,7 +219,8 @@ def get_books_by_author(author_id: int) -> list[dict]:
 
 db_tools = [get_books_by_shelf, get_books_by_author, get_books_by_genre, get_books_by_id, get_similar_books, get_all_genres, get_all_books, get_all_shelves, get_all_authors]
 
-search_tools = [get_books_by_shelf, get_books_by_author, get_books_by_genre, get_books_by_id, get_similar_books]
+search_tools = db_tools
+# search_tools = [get_similar_books]
 # print(get_all_genres())
 # print(get_all_books())
 # print(get_all_shelves())

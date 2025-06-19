@@ -38,7 +38,7 @@ sys_msg = SystemMessage(
     role="system"
 )
 
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+llm = ChatOpenAI(model="gpt-4o", temperature=0)
 search_tools = db_tools
 llm_with_tools = llm.bind_tools(search_tools)
 
@@ -120,7 +120,7 @@ def getRecommendation(state: RecommendBookState):
     # state['recommendations'] = recommendations
     print(f"📚 Recommendations: {llm_response.content}")
     print(f"output: {llm_response.content}")
-    return { "messages": [llm_response], "recommendations": llm_response.content, "output": llm_response.content }
+    return {"messages": llm_response,"recommendations": llm_response.content, "output": llm_response.content }
 
 
 
