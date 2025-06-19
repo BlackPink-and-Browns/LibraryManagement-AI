@@ -48,6 +48,7 @@ class ParentState(MessagesState):
     genre: Optional[str]
     rating: Optional[float]
     location: Optional[str]
+    author: Optional[str]
     recommendations: Optional[str]
     available_books: Optional[List[str]]
     results: Optional[str]

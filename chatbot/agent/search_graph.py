@@ -15,7 +15,6 @@ import httpx
 
 load_dotenv()
 
-image_url = "https://res.cloudinary.com/jerrick/image/upload/d_642250b563292b35f27461a7.png,f_jpg,fl_progressive,q_auto,w_1024/6478a69e5695fb001d1e1969.jpg"
 def fetch_image_from_url(url: str) -> str:
     try:    
         response = httpx.get(url)
@@ -25,7 +24,7 @@ def fetch_image_from_url(url: str) -> str:
     except httpx.RequestError as e:
         print(f"Error fetching image: {e}")
         return ""
-image_base64 = fetch_image_from_url(image_url)
+
 
 class BookState(MessagesState):
   title: Optional[str]
@@ -85,7 +84,8 @@ def retrieveBookToSearch(state: BookState):
         "genre": result.genre,
         "description": result.description,
         "location": result.location,
-        "rating": result.rating
+        "rating": result.rating,
+        "messages": AIMessage(content=f"Searching for book: {result.title} by {result.author} in genre {result.genre} with rating {result.rating} and location {result.location}."),
     }
 
 def handleSearch(state: BookState):
@@ -95,14 +95,15 @@ def handleSearch(state: BookState):
         return {"error": "No books found matching the search criteria."}
     
     search_result = {
-        "title": results[0]['title'],
-        "author": results[0]['author'],
-        "genre": results[0]['genre'],
-        "description": results[0]['description'],
-        "location": results[0]['location'],
-        "rating": results[0]['rating'],
-        "results": " ".join([f"{book['title']} by {book['author']} (📍 {book['location']}) ⭐ {book['rating']}" for book in results]),
-        "output": " ".join([f"{book['title']} by {book['author']} (📍 {book['location']}) ⭐ {book['rating']}" for book in results]),
+        # "title": results[0]['title'],
+        # "author": results[0]['author'],
+        # "genre": results[0]['genre'],
+        # "description": results[0]['description'],
+        # "location": results[0]['location'],
+        # "rating": results[0]['rating'],
+        "results": str(results[0]),
+        "output": " ".join([f"{key}: {value}" for key, value in results[0].items() if value is not None]),
+        "messages": AIMessage(content=f"Found book: {[f"{key}: {str(value)}" for key, value in results[0].items() if value is not None]} ")
     }
 
     return search_result
@@ -141,6 +142,10 @@ def getBookList(state: BookState):
         )
         location: Optional[str] = Field(
             description="The location of the book in the library.",
+            default=None
+        )
+        cover_image: Optional[str] = Field(
+            description="The cover image of the book (url).",
             default=None
         )
 

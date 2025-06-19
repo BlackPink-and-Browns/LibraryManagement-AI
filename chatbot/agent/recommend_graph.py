@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from chatbot.services.semantic_search import query_books, create_embedding_text
-from chatbot.agent.tools import get_books_by_genre, get_similar_books
+from chatbot.agent.tools import db_tools
 
 
 load_dotenv()
@@ -21,6 +21,7 @@ class RecommendBookState(MessagesState):
     genre: Optional[str]
     rating: Optional[float]
     location: Optional[str]
+    author: Optional[str]
     recommendations: Optional[str]
     similar_books: Optional[List[str]]
     results: Optional[str]
@@ -38,7 +39,7 @@ sys_msg = SystemMessage(
 )
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-search_tools = [get_books_by_genre, get_similar_books]
+search_tools = db_tools
 llm_with_tools = llm.bind_tools(search_tools)
 
 def retrieveRecommendationRequirement(state: RecommendBookState):
@@ -51,8 +52,8 @@ def retrieveRecommendationRequirement(state: RecommendBookState):
             description="The genre of the book. If not mentioned, it should be None.",
             default=None
         )
-        rating: Optional[float] = Field(
-            description="The rating requirement of the book. If not mentioned, it should be None.",
+        author: Optional[str] = Field(
+            description="The author of the book. If not mentioned, it should be None.",
             default=None
         )
         location: Optional[str] = Field(
@@ -67,17 +68,17 @@ def retrieveRecommendationRequirement(state: RecommendBookState):
     return {
         "user_query": result.user_query,
         "genre": result.genre,
-        "rating": result.rating,
+        "author": result.author,
         "location": result.location,
         }
 
 def getSimilarBooks(state: RecommendBookState):
     user_query = state.get("user_query", "")
     genre = state.get("genre", "")
-    rating = state.get("rating", None)
+    author = state.get("author", "")
     location = state.get("location", "")
 
-    query = user_query.strip()
+    query = user_query
     if not query:
         query = f"Books in {genre} genre with rating {rating} located at {location}"
 
@@ -93,13 +94,15 @@ def getSimilarBooks(state: RecommendBookState):
     return {'similar_books': results}
 
 def getRecommendation(state: RecommendBookState):
+    # available_genres = get_all_genres()
+
     system_prompt = f"""Based on users's query and similar books I will recommend books that match their preferences.
     You should consider the user's query, genre, rating, and location to provide relevant recommendations.
     Never mention books that are not available (fetched through tools).
     Also mention why the books are relevant to the user's query and why they are a good read.
     User's query: {state.get('user_query', '')}
     Genre: {state.get('genre', '')}
-    Rating: {state.get('rating', '')}
+    Author: {state.get('author', '')}
     Location: {state.get('location', '')}
     """
 
@@ -129,28 +132,36 @@ def getBookList(state: RecommendBookState):
     """
 
     class Book(BaseModel):
+        id: Optional[str] = Field(
+            description="The unique identifier of the book. If not mentioned, it should be None.",
+            default=None
+        )
         title: Optional[str] = Field(
             description="The title of the book.",
             default=None
         )
         author: Optional[str] = Field(
-            description="The author of the book.",
+            description="The author of the book. If not mentioned, it should be None.",
             default=None
         )
         description: Optional[str] = Field(
-            description="A brief description of the book.",
+            description="A brief description of the book.   If not mentioned, it should be None.",
             default=None
         )
         genre: Optional[str] = Field(
-            description="The genre of the book.",
+            description="The genre of the book. If not mentioned, it should be None.",
             default=None
         )
         rating: Optional[float] = Field(
-            description="The rating of the book.",
+            description="The average rating of the book. If not mentioned, it should be None.",
             default=None
         )
-        location: Optional[str] = Field(
-            description="The location of the book in the library.",
+        shelf: Optional[str] = Field(
+            description="The shelf in which the book is located in the library. If not mentioned, it should be None.",
+            default=None
+        )
+        cover_image: Optional[str] = Field(
+            description="The cover image of the book (url). If not mentioned, it should be None.",
             default=None
         )
 
