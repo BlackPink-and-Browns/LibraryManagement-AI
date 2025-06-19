@@ -104,6 +104,9 @@ def getRecommendation(state: RecommendBookState):
     Genre: {state.get('genre', '')}
     Author: {state.get('author', '')}
     Location: {state.get('location', '')}
+
+    Important: Never mention books that are not available in the library.
+    Keep the ids of the books in the recommendations.
     """
 
     system_msg = AIMessage(
@@ -115,7 +118,8 @@ def getRecommendation(state: RecommendBookState):
     llm_response = llm_with_tools.invoke(messages)
 
     # state['recommendations'] = recommendations
-    # print(f"📚 Recommendations: {recommendations}")
+    print(f"📚 Recommendations: {llm_response.content}")
+    print(f"output: {llm_response.content}")
     return { "messages": [llm_response], "recommendations": llm_response.content, "output": llm_response.content }
 
 
@@ -129,6 +133,9 @@ def getBookList(state: RecommendBookState):
     return the list of books in the following format:
     message: A paragraph description about each books and why is it recommended according to user's query. If there is no book, return an explanation that no books were found.
     books: A list of books, each represented as a dictionary:
+
+    Important: Never mention books that are not mentioned in the context.
+    keep the ids of the books in the recommendations.
     """
 
     class Book(BaseModel):
@@ -179,7 +186,7 @@ def getBookList(state: RecommendBookState):
         role="system"
     )
 
-    messages = [system_msg] + [AIMessage(content=state["recommendations"])]
+    messages = [system_msg] + [state["recommendations"]]
     llm_response = llm.with_structured_output(BookList).invoke(messages)
 
     # state['recommendations'] = recommendations
