@@ -29,7 +29,7 @@ def fetch_image_from_url(url: str) -> str:
         return ""
 
 
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+llm = ChatOpenAI(model="gpt-4o", temperature=0)
 
 system_prompt = """
     You are an intent classifier. Your task is to identify the intended action from the user query. Based on the query, classify the action into one of the following:

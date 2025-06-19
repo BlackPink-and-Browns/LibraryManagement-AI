@@ -63,7 +63,8 @@ def populate_chroma(books: List[Dict]):
     for book in books:
         doc_text = f"{book['title']} by {" ".join([author['name'] for author in book['authors']])}. {book['description']}. {" ".join([genre['name'] for genre in book['genres']])}"
         embedding = embedding_model.encode([doc_text])[0].tolist()
-        book_cleaned = {k: v for k, v in book.items() if not isinstance(v, list)}  # Remove None values
+        book_cleaned = {k: v for k, v in book.items() if not isinstance(v, list)}
+        print(book_cleaned)  # Remove None values
         collection.add(
             documents=[doc_text],
             embeddings=[embedding],
@@ -87,6 +88,8 @@ def query_books(query: str, top_k: int = 3) -> List[Dict]:
     for i in range(len(results["metadatas"][0])):
         books.append(results["metadatas"][0][i])
 
+    print("inside query_books")
+    print(books)
     return books
 
 def add_book(book: Dict):
@@ -130,4 +133,4 @@ if __name__ == "__main__":
         matches = query_books(args.query, 1)
         print(f"\n🔍 Top matches for: '{args.query}'")
         for book in matches:
-            print(f"- {book['title']} by {book['author']} (📍 {book['location']}) ⭐ {book['rating']}")
+            print(f"- {book}")
