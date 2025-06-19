@@ -3,6 +3,7 @@ from langgraph.graph import StateGraph, END, MessagesState, START
 from langchain_core.runnables import RunnableLambda
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.checkpoint.memory import MemorySaver
+from langgraph.prebuilt import tools_condition, ToolNode
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
 import os
@@ -10,9 +11,8 @@ from dotenv import load_dotenv
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from chatbot.services.semantic_search import query_books, create_embedding_text
+from chatbot.agent.tools import db_tools
 
-
-load_dotenv()
 
 load_dotenv()
 
@@ -21,10 +21,12 @@ class RecommendBookState(MessagesState):
     genre: Optional[str]
     rating: Optional[float]
     location: Optional[str]
+    author: Optional[str]
     recommendations: Optional[str]
-    available_books: Optional[List[str]]
+    similar_books: Optional[List[str]]
     results: Optional[str]
     output: Optional[str]
+    books: Optional[List[dict]]
 
 system_prompt = """You are a helpful library assistant. Your task is to help users find information about books in the library.
 You should recommend books based on the user's query. If the user provides specific details about a book, you should use those details to refine your search.
@@ -37,6 +39,8 @@ sys_msg = SystemMessage(
 )
 
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+search_tools = db_tools
+llm_with_tools = llm.bind_tools(search_tools)
 
 def retrieveRecommendationRequirement(state: RecommendBookState):
     class Recommendation(BaseModel):
@@ -48,8 +52,8 @@ def retrieveRecommendationRequirement(state: RecommendBookState):
             description="The genre of the book. If not mentioned, it should be None.",
             default=None
         )
-        rating: Optional[float] = Field(
-            description="The rating requirement of the book. If not mentioned, it should be None.",
+        author: Optional[str] = Field(
+            description="The author of the book. If not mentioned, it should be None.",
             default=None
         )
         location: Optional[str] = Field(
@@ -64,17 +68,17 @@ def retrieveRecommendationRequirement(state: RecommendBookState):
     return {
         "user_query": result.user_query,
         "genre": result.genre,
-        "rating": result.rating,
+        "author": result.author,
         "location": result.location,
         }
 
 def getSimilarBooks(state: RecommendBookState):
     user_query = state.get("user_query", "")
     genre = state.get("genre", "")
-    rating = state.get("rating", None)
+    author = state.get("author", "")
     location = state.get("location", "")
 
-    query = user_query.strip()
+    query = user_query
     if not query:
         query = f"Books in {genre} genre with rating {rating} located at {location}"
 
@@ -87,15 +91,18 @@ def getSimilarBooks(state: RecommendBookState):
         return "No books found matching your criteria."
 
 
-    return {'available_books': results}
+    return {'similar_books': results}
 
 def getRecommendation(state: RecommendBookState):
-    system_prompt = f"""Based on users's query and available books I will recommend books that match their preferences.
+    # available_genres = get_all_genres()
+
+    system_prompt = f"""Based on users's query and similar books I will recommend books that match their preferences.
     You should consider the user's query, genre, rating, and location to provide relevant recommendations.
-    Available books: {state.get('available_books', [])}
+    Never mention books that are not available (fetched through tools).
+    Also mention why the books are relevant to the user's query and why they are a good read.
     User's query: {state.get('user_query', '')}
     Genre: {state.get('genre', '')}
-    Rating: {state.get('rating', '')}
+    Author: {state.get('author', '')}
     Location: {state.get('location', '')}
     """
 
@@ -105,21 +112,98 @@ def getRecommendation(state: RecommendBookState):
     )
 
     messages = [system_msg] + state['messages']
-    llm_response = llm.invoke(messages)
-    recommendations = llm_response.content.strip()
+    llm_response = llm_with_tools.invoke(messages)
+
     # state['recommendations'] = recommendations
     # print(f"📚 Recommendations: {recommendations}")
-    return { 'recommendations': recommendations, "output" : recommendations }
+    return { "messages": [llm_response], "recommendations": llm_response.content, "output": llm_response.content }
 
+
+
+def getBookList(state: RecommendBookState):
+    system_prompt = """from the messages, extract the list of books in the given format.
+    Each book should be represented as a dictionary.
+    if there are no books, return an empty list.
+    Also, provide a beautiful description about each books, why it is relevant, and why it is a good read.
+
+    return the list of books in the following format:
+    message: A paragraph description about each books and why is it recommended according to user's query. If there is no book, return an explanation that no books were found.
+    books: A list of books, each represented as a dictionary:
+    """
+
+    class Book(BaseModel):
+        id: Optional[str] = Field(
+            description="The unique identifier of the book. If not mentioned, it should be None.",
+            default=None
+        )
+        title: Optional[str] = Field(
+            description="The title of the book.",
+            default=None
+        )
+        author: Optional[str] = Field(
+            description="The author of the book. If not mentioned, it should be None.",
+            default=None
+        )
+        description: Optional[str] = Field(
+            description="A brief description of the book.   If not mentioned, it should be None.",
+            default=None
+        )
+        genre: Optional[str] = Field(
+            description="The genre of the book. If not mentioned, it should be None.",
+            default=None
+        )
+        rating: Optional[float] = Field(
+            description="The average rating of the book. If not mentioned, it should be None.",
+            default=None
+        )
+        shelf: Optional[str] = Field(
+            description="The shelf in which the book is located in the library. If not mentioned, it should be None.",
+            default=None
+        )
+        cover_image: Optional[str] = Field(
+            description="The cover image of the book (url). If not mentioned, it should be None.",
+            default=None
+        )
+
+    class BookList(BaseModel):
+        description: str = Field(
+            description = "A paragraph description about each books, why is it recommended according to user's query. If there is no book, return an explanation that no books were found.",
+        )
+        books: List[Book] = Field(
+            description="A list of books.",
+            default_factory=list
+        )
+
+    system_msg = AIMessage(
+        content=system_prompt,
+        role="system"
+    )
+
+    messages = [system_msg] + [AIMessage(content=state["recommendations"])]
+    llm_response = llm.with_structured_output(BookList).invoke(messages)
+
+    # state['recommendations'] = recommendations
+    # print(f"📚 Recommendations: {recommendations}")
+    print("llm_response in getBookList Node")
+    print(llm_response)
+    return { "books": llm_response if llm_response else [] }
 
 builder = StateGraph(RecommendBookState)
 builder.add_node("retrieveRecommendationRequirement", retrieveRecommendationRequirement)
 builder.add_node("getSimilarBooks", getSimilarBooks)
 builder.add_node("getRecommendation", getRecommendation)
+builder.add_node("getBookList", getBookList)
+
+builder.add_node("tools", ToolNode(tools = search_tools))
+builder.add_conditional_edges("getRecommendation", tools_condition)
+builder.add_edge("tools", "getRecommendation")
+
 builder.add_edge("retrieveRecommendationRequirement", "getSimilarBooks")
 builder.add_edge("getSimilarBooks", "getRecommendation")
 builder.add_edge(START, "retrieveRecommendationRequirement")
-builder.add_edge("getRecommendation", END)
+builder.add_edge("getRecommendation", "getBookList")
+builder.add_edge("getBookList", END)
+# builder.add_edge("getRecommendation", END)
 
 memory = MemorySaver()
 recommend_graph = builder.compile(checkpointer=memory)

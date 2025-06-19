@@ -15,7 +15,6 @@ import httpx
 
 load_dotenv()
 
-image_url = "https://res.cloudinary.com/jerrick/image/upload/d_642250b563292b35f27461a7.png,f_jpg,fl_progressive,q_auto,w_1024/6478a69e5695fb001d1e1969.jpg"
 def fetch_image_from_url(url: str) -> str:
     try:    
         response = httpx.get(url)
@@ -25,7 +24,7 @@ def fetch_image_from_url(url: str) -> str:
     except httpx.RequestError as e:
         print(f"Error fetching image: {e}")
         return ""
-image_base64 = fetch_image_from_url(image_url)
+
 
 class BookState(MessagesState):
   title: Optional[str]
@@ -36,6 +35,7 @@ class BookState(MessagesState):
   location: Optional[str]
   results: Optional[str]
   output: Optional[str]
+  books: Optional[List[dict]]
 
 sys_msg = """You are a helpful library assistant. Your task is to help users find information about books in the library.
 You will be provided with a series of messages from the user. Based on these messages, you need to extract the following information about a book (only if mentioned by the user):
@@ -84,7 +84,8 @@ def retrieveBookToSearch(state: BookState):
         "genre": result.genre,
         "description": result.description,
         "location": result.location,
-        "rating": result.rating
+        "rating": result.rating,
+        "messages": AIMessage(content=f"Searching for book: {result.title} by {result.author} in genre {result.genre} with rating {result.rating} and location {result.location}."),
     }
 
 def handleSearch(state: BookState):
@@ -94,26 +95,94 @@ def handleSearch(state: BookState):
         return {"error": "No books found matching the search criteria."}
     
     search_result = {
-        "title": results[0]['title'],
-        "author": results[0]['author'],
-        "genre": results[0]['genre'],
-        "description": results[0]['description'],
-        "location": results[0]['location'],
-        "rating": results[0]['rating'],
-        "results": " ".join([f"{book['title']} by {book['author']} (📍 {book['location']}) ⭐ {book['rating']}" for book in results]),
-        "output": " ".join([f"{book['title']} by {book['author']} (📍 {book['location']}) ⭐ {book['rating']}" for book in results])
+        # "title": results[0]['title'],
+        # "author": results[0]['author'],
+        # "genre": results[0]['genre'],
+        # "description": results[0]['description'],
+        # "location": results[0]['location'],
+        # "rating": results[0]['rating'],
+        "results": str(results[0]),
+        "output": " ".join([f"{key}: {value}" for key, value in results[0].items() if value is not None]),
+        "messages": AIMessage(content=f"Found book: {[f"{key}: {str(value)}" for key, value in results[0].items() if value is not None]} ")
     }
 
     return search_result
+
+def getBookList(state: BookState):
+    system_prompt = """from the messages, extract the list of books in the given format.
+    Each book should be represented as a dictionary.
+    if there are no books, return an empty list.
+    Also, provide a beautiful description about each books, why it is relevant, and why it is a good read.
+
+    return the list of books in the following format:
+    message: A paragraph description about each books. If there is no book, return an explanation that no books were found.
+    books: A list of books, each represented as a dictionary:
+    """
+
+    class Book(BaseModel):
+        title: Optional[str] = Field(
+            description="The title of the book.",
+            default=None
+        )
+        author: Optional[str] = Field(
+            description="The author of the book.",
+            default=None
+        )
+        description: Optional[str] = Field(
+            description="A brief description of the book.",
+            default=None
+        )
+        genre: Optional[str] = Field(
+            description="The genre of the book.",
+            default=None
+        )
+        rating: Optional[float] = Field(
+            description="The rating of the book.",
+            default=None
+        )
+        location: Optional[str] = Field(
+            description="The location of the book in the library.",
+            default=None
+        )
+        cover_image: Optional[str] = Field(
+            description="The cover image of the book (url).",
+            default=None
+        )
+
+    class BookList(BaseModel):
+        description: str = Field(
+            description = "A paragraph description about each books, Why it is relevant. If there is no book, return an explanation that no books were found.",
+        )
+        books: List[Book] = Field(
+            description="A list of books.",
+            default_factory=list
+        )
+
+    system_msg = AIMessage(
+        content=system_prompt,
+        role="system"
+    )
+
+    messages = [system_msg] + [AIMessage(content=state["results"])]
+    llm_response = llm.with_structured_output(BookList).invoke(messages)
+
+    # state['recommendations'] = recommendations
+    # print(f"📚 Recommendations: {recommendations}")
+    print("llm_response in getBookList Node")
+    print(llm_response)
+    return { "books": llm_response if llm_response else [] , "output": llm_response.description if llm_response else "" }
 
 builder = StateGraph(BookState)
 builder.add_node("retrieveBookToSearch",retrieveBookToSearch)
 builder.add_node("handleSearch",handleSearch)
 # builder.add_node("END",END)
+builder.add_node("getBookList", getBookList)
 
 builder.add_edge(START, "retrieveBookToSearch")
 builder.add_edge("retrieveBookToSearch","handleSearch")
-builder.add_edge("handleSearch",END)
+builder.add_edge("handleSearch","getBookList")
+builder.add_edge("getBookList",END)
+# builder.add_edge("handleSearch",END)
 
 memory = MemorySaver()
 # thread = {"configurable": {"thread_id": "user_id"}}

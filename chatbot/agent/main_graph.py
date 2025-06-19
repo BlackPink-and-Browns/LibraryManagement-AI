@@ -5,13 +5,13 @@ from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.runnables import RunnableLambda
 from langchain_openai import ChatOpenAI
 from pydantic import BaseModel, Field
+import sys
 import os
 from dotenv import load_dotenv
-
+sys.path.insert(1, '/home/inamurahman/library-management-system/LibraryManagement-AI')
 from chatbot.services.semantic_search import query_books, create_embedding_text
 from chatbot.agent.recommend_graph import recommend_graph
 from chatbot.agent.search_graph import search_graph
-
 import base64
 import httpx
 
@@ -48,11 +48,13 @@ class ParentState(MessagesState):
     genre: Optional[str]
     rating: Optional[float]
     location: Optional[str]
+    author: Optional[str]
     recommendations: Optional[str]
     available_books: Optional[List[str]]
     results: Optional[str]
     output: Optional[str]
     thread_id: Optional[str]
+    books: Optional[List[dict]]
 
 def findAction(state: ParentState):
     class Action(BaseModel):
@@ -63,6 +65,7 @@ def findAction(state: ParentState):
         
     result = llm.with_structured_output(Action).invoke([sys_msg] + state['messages'])
     print (state['messages'])
+    print("Action:", result.action)
     return {
         "action": result.action
     }
@@ -70,12 +73,12 @@ def findAction(state: ParentState):
 
 def handle_generic_messages(state):
     system_msg = SystemMessage(
-        content="If user query does not match the search or recommend queries, respond user with a message that you are a library assistant and can help with book searches or recommendations.",
+        content="Do not respond to user's queries, respond to user with a message that you are a library assistant and can help with book searches or recommendations.",
         role="system"
     )
-    output = llm.invoke([system_msg] + state['messages']).content
+    output = llm.invoke([system_msg] + state['messages'])
     print(state['messages'])
-    return {"messages": [output], "output": output}
+    return {"messages": [output], "output": output.content, "books": []}
 
 def route_to_subagent(state):
     if state['action'] == "SEARCH":
@@ -122,7 +125,30 @@ def chat_with_agent(user_message, user_id, image_base64=None):
     user_message = HumanMessage(content=content)
     print("User Message:", user_message)
     state = main_graph.invoke({"messages": user_message}, config)
-    return state["output"]
+    # return state["messages"][-1].content if state["messages"] else "No response generated."
+    return {
+        "message" : state["output"] if "output" in state else "",
+        "books": state["books"] if "books" in state else [],
+    }
+
+
+async def stream_chat_with_agent(user_message, user_id, image_base64=None):
+    config = {"configurable": {"thread_id": user_id}}
+    content = [{"type": "text", "text": user_message}]
+    if image_base64:
+        content.append({"type": "image_url", "image_url": {
+            "url": f"data:image/jpeg;base64,{image_base64}"
+        }})
+    user_message = HumanMessage(content=content)
+    print("User Message:", user_message)
+    for event in main_graph.stream({"messages": user_message}, config, stream_mode="updates"):
+        for value in event.values():
+            # print(value)
+            print("", value["messages"][-1].content if value.get("messages", "") else "")
+            yield value
+
+
+# stream_chat_with_agent("recommend me books on startup development", "user123")
 
 
 # Example usage
